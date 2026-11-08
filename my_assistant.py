@@ -6,12 +6,14 @@ HANDOFF_WORDS = ["cancel", "address", "payment", "refund"]
 
 
 class OrderAssistant:
-    """A mock customer service assistant that checks order status."""
+    """An order assistant that uses rules, a tool, and an AI model."""
 
-    def __init__(self, name, order_tool):
+    def __init__(self, name, instructions, order_tool, model):
         """Set up the assistant with a name, tool, and empty history."""
         self.name = name
+        self.instructions = instructions
         self.order_tool = order_tool
+        self.model = model
         self.history = []
 
     def respond(self, user_message):
@@ -24,7 +26,7 @@ class OrderAssistant:
         return reply
 
     def choose_reply(self, user_message):
-        """Choose a response based on simple keyword rules."""
+        """Use rules first, then ask the model for other questions."""
         text = user_message.lower()
 
         if self.needs_human(text):
@@ -36,12 +38,7 @@ class OrderAssistant:
         if "order" in text or "status" in text:
             return self.order_reply(user_message)
 
-        if "hello" in text or "hi" in text:
-            return (
-                f"Hello! I'm {self.name}. I can help you check the status of an order."
-            )
-
-        return "I'm not sure how to help with that. I can check the status of an order."
+        return self.model_reply()
 
     def needs_human(self, text):
         """Return True when the request needs a customer service employee."""
@@ -63,3 +60,14 @@ class OrderAssistant:
             return "I couldn't find that order. Please check the order ID."
 
         return f"Order {order_id} is currently {status}."
+
+    def model_reply(self):
+        """Ask the model for a response and handle any missing answers."""
+        reply = self.model.reply(self.instructions, self.history)
+
+        if reply is None:
+            return (
+                "Sorry, I can't answer that right now. "
+                "Please try again in a few moments."
+            )
+        return reply

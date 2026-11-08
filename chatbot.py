@@ -5,7 +5,7 @@ HANDOFF_WORDS = ["address", "payment", "card"]
 
 
 class SupportChatbot:
-    """A mock support chatbot. Its replies come from simple rules, not from AI."""
+    """A support chatbot. Rules handle what must be right. A model handles the rest."""
 
     def respond(self, user_message):
         """Record the user's message, choose a reply, record it, and return it."""
@@ -15,20 +15,22 @@ class SupportChatbot:
         return reply
 
     def choose_reply(self, user_message):
-        """Choose a reply with keyword rules. This is the mock part."""
+        """Use a rule when one applies. Otherwise ask the model."""
         text = user_message.lower()
         if self.needs_human(text):
             return "I can't help with that here. I'm passing you to a human agent."
         if "order" in text:
             return self.order_reply(user_message)
-        if "hello" in text:
-            return f"Hello! I'm {self.name}. I can check an order status for you."
-        if "order" in text:
-            return self.order_reply(user_message)
         if "stock" in text:
             return self.stock_reply(user_message)
+        return self.model_reply()
 
-        return "I'm not sure how to help with that. I can check an order status."
+    def model_reply(self):
+        """Ask the model for a reply. Give a safe answer if the model has none."""
+        reply = self.model.reply(self.instructions, self.history)
+        if reply is None:
+            return "Sorry, I can't answer that right now. Please try again in a moment."
+        return reply
 
     def needs_human(self, text):
         """Return True if the message is about something a person must handle."""
@@ -53,12 +55,13 @@ class SupportChatbot:
                 count += 1
         return count
 
-    def __init__(self, name, instructions, order_tool, stock_tool):
+    def __init__(self, name, instructions, order_tool, stock_tool, model):
         """Set up one chatbot with its own name, instructions, tools, and history."""
         self.name = name
         self.instructions = instructions
         self.order_tool = order_tool
         self.stock_tool = stock_tool
+        self.model = model
         self.history = []
 
     def stock_reply(self, user_message):
